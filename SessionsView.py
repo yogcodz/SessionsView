@@ -15,7 +15,7 @@ class Event:
 
 def get_events_data(user, API_KEY):
     headers = {'Accept': 'application/json'}
-    api_url = "https://candidate.hubteam.com/candidateTest/v3/problem/dataset?userKey={}".format(user)
+    api_url = "https://candidate.hubteam.com/candidateTest/v3/problem/dataset?userKey={}".format(API_KEY)
     response = requests.request("get", api_url, headers=headers)
     return response.json()
 
@@ -73,7 +73,7 @@ def create_sessions_from_events_list_per_user(events):
             sessions.append(construct_session(events[start_index:end_index]))
         else:
             sessions.append(
-                {"duration": 0, "pages": events[start_index].url, "startTime": events[start_index].timestamp})
+                {"duration": 0, "pages": [events[start_index].url], "startTime": events[start_index].timestamp})
         index = end_index
     return sessions
 
@@ -82,17 +82,29 @@ def create_sessions_view(events_by_user_data):
     sessionsByUser = {}
     for user in events_by_user_data.keys():
         events_list = events_by_user_data[user]
-        user_sessions = create_sessions_from_events_list_per_user(events_list)
-        sessionsByUser[str(user)] = user_sessions
+        if not (10 > len(events_list) > 5):
+            continue
+        else:
+            user_sessions = create_sessions_from_events_list_per_user(events_list)
+            sessionsByUser[str(user)] = user_sessions
+            break
 
-    #print (json.dumps({json.dumps("sessionsByUser"):json.dumps(sessionsByUser)}))
-    return json.dumps({"sessionsByUser":sessionsByUser})
+    return {"sessionsByUser": sessionsByUser}
 
 
 API_KEY = "0f39d5ab33ac84bb5c4fa0428b39"
 events_data = get_events_data("0f39d5ab33ac84bb5c4fa0428b39", API_KEY)
 events_by_user_data = group_and_sort_events_by_user(events_data)
 sessions_view_data = create_sessions_view(events_by_user_data)
-print(json.dumps(sessions_view_data))
+pdb.set_trace()
 
-post_sessions_view_data(sessions_view_data, API_KEY)
+# json.dumps({'foo': 'bar'}).replace('"', '\\"')
+# print(json.dumps(sessions_view_data).replace('"', '\\"'))
+# sessions_view_data['sessionsByUser'].pop('user')
+# sessions_view_data['sessionsByUser'].pop('50afbf66-610c-3c42-a133-2001f40c79c5')
+
+
+json_object = json.loads(json.dumps(sessions_view_data).replace("\'", "\""))
+json_formatted_str = json.dumps(json_object)
+# print(json_formatted_str)
+post_sessions_view_data(json_object, API_KEY)
